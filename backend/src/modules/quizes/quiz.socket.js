@@ -48,7 +48,6 @@ export async function startQuiz(io, quizId) {
     await new Promise(r => setTimeout(r, q.time_limit * 1000));
     io.to(`quiz_${quizId}`).emit("questionEnded", { questionId: q.id, correct: q.correct_option });
 
-    // Remove active question after time ends
     delete activeQuestions[quizId];
   }
 
