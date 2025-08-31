@@ -77,3 +77,7 @@ export async function submitAnswer({ quizId, userId, questionId, answer }) {
     [quizId, userId, questionId, answer]
   );
 }
+
+export async function createCode(quizId){
+  
+}
