@@ -1,4 +1,5 @@
 import pool from "../../db.js";
+import { v4 as uuidv4 } from 'uuid';
 
 export async function setQuizStatus(quizId, status) {
   await pool.query(
@@ -11,16 +12,18 @@ export async function getQuizStatus(quizId) {
   const res = await pool.query("SELECT status FROM quizzes WHERE id=$1", [quizId]);
   return res.rows[0]?.status;
 }
-
+export async function createCode(){
+  return uuidv4().split("-")[0];
+}
 
 export async function createQuiz(title, questions) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
+    const code = await createCode();
     const quizResult = await client.query(
-      "INSERT INTO quizzes (title) VALUES ($1) RETURNING *",
-      [title]
+      "INSERT INTO quizzes (title,code) VALUES ($1,$2) RETURNING *",
+      [title,code]
     );
     const quiz = quizResult.rows[0];
 
@@ -76,8 +79,4 @@ export async function submitAnswer({ quizId, userId, questionId, answer }) {
     "INSERT INTO answers (quiz_id, user_id, question_id, answer) VALUES ($1,$2,$3,$4)",
     [quizId, userId, questionId, answer]
   );
-}
-
-export async function createCode(quizId){
-  
 }

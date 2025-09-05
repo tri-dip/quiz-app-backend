@@ -30,7 +30,7 @@ export async function createQuiz(req, res) {
   }
   try {
     const quiz = await QuizService.createQuiz(title, questions);
-    res.status(201).json({ quizId: quiz.id, message: "Quiz created!" });
+    res.status(201).json({ id: quiz.id, code: quiz.code, message: "Quiz created!" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Quiz creation failed" });
