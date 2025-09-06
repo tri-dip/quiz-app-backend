@@ -28,7 +28,7 @@ export default {
         }
     },
 
-    async createUser(username,scholar_id, password) {
+    async createUser(username,scholar_id, password,isadmin) {
     try {
       const existingUser = await this.findUser(scholar_id);
       if (existingUser) {
@@ -37,8 +37,8 @@ export default {
 
       const hashed = await bcrypt.hash(password, 10);
       const res = await pool.query(
-        "INSERT INTO users (username,sch_id, password) VALUES ($1, $2, $3) RETURNING *",
-        [username, scholar_id, hashed]
+        "INSERT INTO users (username,sch_id, password,isadmin) VALUES ($1, $2, $3, $4) RETURNING *",
+        [username, scholar_id, hashed,isadmin]
       );
       return res.rows[0];
     } catch (err) {

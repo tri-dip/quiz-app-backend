@@ -3,7 +3,7 @@ import authService from "./auth.service.js";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET;
-
+const ADMIN_CODE = process.env.ADMIN_CODE; 
 export default {
     async login(req, res, next) {
         passport.authenticate("local", async (err, user, info) => {
@@ -14,7 +14,7 @@ export default {
                         user: user
                     });
                 }
-                const token = jwt.sign({ id: user.id, sch_id: user.sch_id }, JWT_SECRET, { expiresIn: "7d" });
+                const token = jwt.sign({ id: user.id, sch_id: user.sch_id, isAdmin: user.isadmin }, JWT_SECRET, { expiresIn: "7d" }); 
                 res.cookie("token", token, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production", 
@@ -28,14 +28,20 @@ export default {
         })(req, res, next);
     },
     async register(req, res, next) {
-        const { username,scholar_id, password } = req.body;
+        const { username, scholar_id, password, adminCode } = req.body;
         try {
             const existingUser = await authService.findUser(scholar_id);
             if (existingUser) {
-                throw new Error("Username already exists");
+                throw new Error("Scholar ID already exists");
             }
-            const user = await authService.createUser(username,scholar_id, password);
-            const token = jwt.sign({ id: user.id, sch_id: user.sch_id }, JWT_SECRET, { expiresIn: "7d" });
+
+            let isadmin = false;
+            if (adminCode && adminCode === ADMIN_CODE) {
+                isadmin = true;
+            }
+
+            const user = await authService.createUser(username, scholar_id, password, isadmin);
+            const token = jwt.sign({ id: user.id, sch_id: user.sch_id, isAdmin: user.isadmin }, JWT_SECRET, { expiresIn: "7d" }); 
             res.cookie("token", token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
