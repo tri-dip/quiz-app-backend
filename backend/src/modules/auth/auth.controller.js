@@ -41,7 +41,7 @@ export default {
             }
 
             const user = await authService.createUser(username, scholar_id, password, isadmin);
-            const token = jwt.sign({ id: user.id, sch_id: user.sch_id, isAdmin: user.isadmin }, JWT_SECRET, { expiresIn: "7d" }); 
+            const token = jwt.sign({ id: user.id, username:user.username, sch_id: user.sch_id, isAdmin: user.isadmin }, JWT_SECRET, { expiresIn: "7d" }); 
             res.cookie("token", token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
