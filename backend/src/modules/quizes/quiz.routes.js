@@ -4,7 +4,7 @@ import * as quizController from "./quiz.controller.js";
 const router = express.Router();
 
 router.post("/create", quizController.createQuiz);
-router.post("/start/:quizId", (req, res) => {
+router.post("/start/:quizCode", (req, res) => {
   const io = req.app.get("io");
   quizController.startQuizController(req, res, io);
 });

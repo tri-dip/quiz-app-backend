@@ -23,7 +23,7 @@ initQuizSocket(io);
 async function start() {
   try {
     server.listen(port, () => {
-      console.log(`Server running at https://quiz-app-backend-7m74.onrender.com`);
+      console.log(`Server running at ${port}`);
     });
   } catch (err) {
     console.error("Failed to start server:", err);

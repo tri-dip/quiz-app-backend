@@ -7,6 +7,22 @@ export async function setQuizStatus(quizId, status) {
     [status, quizId]
   );
 }
+export async function getQuizByCode(quizCode) {
+  try {
+    const res = await pool.query(
+      "SELECT * FROM quizzes WHERE code = $1",
+      [quizCode]
+    );
+
+    if (res.rows.length === 0) {
+      return null; 
+    }
+    return res.rows[0];
+  } catch (err) {
+    console.error("Error fetching quiz by code:", err);
+    throw err; 
+  }
+}
 
 export async function getQuizStatus(quizId) {
   const res = await pool.query("SELECT status FROM quizzes WHERE id=$1", [quizId]);
@@ -63,20 +79,54 @@ export async function getQuestions(quizId) {
 
 export async function getLeaderboard(quizId) {
   const res = await pool.query(
-    `SELECT user_id, COUNT(*) as score 
-     FROM answers a
-     JOIN questions q ON a.question_id = q.id
-     WHERE a.quiz_id=$1 AND a.answer=q.correct_option
+    `SELECT user_id, SUM(points) as score
+     FROM answers
+     WHERE quiz_id = $1
      GROUP BY user_id
      ORDER BY score DESC`,
     [quizId]
   );
-  return res.rows;
+  return res.rows; 
 }
 
-export async function submitAnswer({ quizId, userId, questionId, answer }) {
-  await pool.query(
-    "INSERT INTO answers (quiz_id, user_id, question_id, answer) VALUES ($1,$2,$3,$4)",
-    [quizId, userId, questionId, answer]
-  );
+
+export async function submitAnswer({ quizId, userId, questionId, answer, endTime, totalTime }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const qRes = await client.query(
+      "SELECT correct_option FROM questions WHERE id=$1",
+      [questionId]
+    );
+    if (qRes.rows.length === 0) throw new Error("Question not found");
+
+    const correctOption = qRes.rows[0].correct_option;
+    const isCorrect = answer === correctOption;
+
+    let points = 0;
+    if (isCorrect) {
+      points = 10;
+      const timeLeft = Math.max(0, endTime - Date.now());
+      const bonus = Math.round((timeLeft / totalTime) * 10);
+      points += bonus;
+    }
+
+    await client.query(
+      `INSERT INTO answers (quiz_id, user_id, question_id, answer, is_correct, points)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (quiz_id, user_id, question_id)
+       DO UPDATE SET answer=$4, is_correct=$5, points=$6`,
+      [quizId, userId, questionId, answer, isCorrect, points]
+    );
+
+    await client.query("COMMIT");
+    return { isCorrect, points };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
+

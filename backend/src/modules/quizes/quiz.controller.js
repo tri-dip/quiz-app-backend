@@ -1,27 +1,35 @@
 import * as QuizService from "./quiz.service.js";
 import { startQuiz } from "./quiz.socket.js";
 
-export async function startQuizController(req, res, io) {
-  const { quizId } = req.params;
 
+export async function startQuizController(req, res, io) {
+  const { quizCode } = req.params;
   try {
-    const status = await QuizService.getQuizStatus(quizId);
-    if (status !== "pending") {
+    const result = await QuizService.getQuizByCode(quizCode);
+
+    if (!result) {
+      return res.status(400).json({ error: "Quiz does not exist" });
+    }
+
+    if (result.status !== "pending") {
       return res.status(400).json({ error: "Quiz has already started or ended" });
     }
 
+    const quizId = result.id;
+
     await QuizService.setQuizStatus(quizId, "live");
+    res.json({ message: "Quiz started!", quizId, quizCode });
 
     io.to(`quiz_${quizId}`).emit("quizStarted", { quizId });
-    await startQuiz(io, quizId);
-    res.json({ message: "Quiz started!" });
+    startQuiz(io, quizId);
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to start quiz" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to start quiz" });
+    }
   }
 }
-
-
 
 export async function createQuiz(req, res) {
   const { title, questions } = req.body;
