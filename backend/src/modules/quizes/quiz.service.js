@@ -77,16 +77,40 @@ export async function getQuestions(quizId) {
   }));
 }
 
+
+/**
+ * Calculates the final leaderboard for a quiz.
+ * @param {string | number} quizId The ID of the quiz.
+ * @returns {Promise<Array<{rank: number, userId: any, username: string, score: number}>>} A promise that resolves to the sorted leaderboard array.
+ */
 export async function getLeaderboard(quizId) {
-  const res = await pool.query(
-    `SELECT user_id, SUM(points) as score
-     FROM answers
-     WHERE quiz_id = $1
-     GROUP BY user_id
-     ORDER BY score DESC`,
-    [quizId]
-  );
-  return res.rows; 
+  
+  const query = `
+    SELECT
+      a.user_id,
+      u.username,
+      SUM(a.points) AS score
+    FROM
+      answers AS a
+    JOIN
+      users AS u ON a.user_id = u.id
+    WHERE
+      a.quiz_id = $1
+    GROUP BY
+      a.user_id, u.username
+    ORDER BY
+      score DESC, a.user_id ASC;
+  `;
+
+  const res = await pool.query(query, [quizId]);
+  const leaderboard = res.rows.map((user, index) => ({
+    rank: index + 1, 
+    userId: user.user_id,
+    username: user.username,
+    score: parseInt(user.score, 10) || 0,
+  }));
+
+  return leaderboard;
 }
 
 
@@ -130,3 +154,15 @@ export async function submitAnswer({ quizId, userId, questionId, answer, endTime
   }
 }
 
+/**
+ * Counts the total number of questions for a given quiz.
+ * @param {string | number} quizId The ID of the quiz.
+ * @returns {Promise<number>} A promise that resolves to the total question count.
+ */
+export async function getQuestionCount(quizId) {
+  const res = await pool.query(
+    'SELECT COUNT(*) FROM questions WHERE quiz_id = $1',
+    [quizId]
+  ); 
+  return parseInt(res.rows[0].count, 10);
+}

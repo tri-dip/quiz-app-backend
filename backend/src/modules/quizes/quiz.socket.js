@@ -12,10 +12,19 @@ export default function initQuizSocket(io) {
         if (!quiz) {
           return socket.emit("error", { message: "Invalid quiz code" });
         }
+
         const quizId = quiz.id;
+        const totalQuestions = await QuizService.getQuestionCount(quizId);
+
         const room = `quiz_${quizId}`;
         socket.join(room);
-        io.to(room).emit("userJoined", { userId, quizId });
+
+        io.to(room).emit("userJoined", {
+          userId,
+          quizId,
+          totalQuestions: totalQuestions,
+        });
+
       } catch (err) {
         console.error("Error in joinQuiz:", err);
         socket.emit("error", { message: "Failed to join the quiz." });
@@ -26,12 +35,10 @@ export default function initQuizSocket(io) {
       const { quizId, questionId, userId } = data;
       const active = activeQuestions[quizId];
 
-      // --- FIX: Use loose equality (==) to handle string vs number types ---
       if (!active || active.questionId != questionId) {
         console.warn(`[${userId}] submitted for inactive/wrong question. Expected: ${active?.questionId}, Got: ${questionId}`);
         return socket.emit("error", { message: "Answer window closed" });
       }
-      // --- END FIX ---
 
       if (Date.now() > active.endTime) {
         console.warn(`[${userId}] submitted answer too late. Deadline passed.`);
